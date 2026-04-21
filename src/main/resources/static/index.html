@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Task Manager</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .form-container {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem; /* Increased padding for a larger click target */
+            font-size: 1.1rem; /* Increased font size for better readability */
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .task-card {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .task-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .priority-HIGH { background-color: #ffeeba; color: #856404; }
+        .priority-MEDIUM { background-color: #e2e3e5; color: #383d41; }
+        .priority-LOW { background-color: #d4edda; color: #155724; }
+        
+        .ai-button {
+            background-color: #6f42c1;
+            margin-top: 1rem;
+        }
+        .ai-button:hover {
+            background-color: #59339d;
+        }
+        .breakdown-container {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-left: 4px solid #6f42c1;
+            border-radius: 4px;
+            display: none;
+        }
+        .breakdown-container ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AI-Powered Task Manager</h1>
+
+    <div class="form-container">
+        <h2>Create New Task</h2>
+        <form id="taskForm">
+            <div class="form-group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description">
+            </div>
+            <div class="form-group" style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="dueDate">Due Date</label>
+                    <input type="date" id="dueDate">
+                </div>
+                <div style="flex: 1;">
+                    <label for="priority">Priority</label>
+                    <select id="priority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label for="status">Status</label>
+                    <select id="status">
+                        <option value="TODO" selected>To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="DONE">Done</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
+
+    <div id="taskList">
+        </div>
+
+    <script>
+        const API_URL = '/tasks';
+
+        // Load tasks on page load
+        document.addEventListener('DOMContentLoaded', fetchTasks);
+
+        // Handle form submission
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const taskData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                dueDate: document.getElementById('dueDate').value || null,
+                priority: document.getElementById('priority').value,
+                status: document.getElementById('status').value
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('taskForm').reset();
+                    fetchTasks(); // Refresh the list
+                } else {
+                    alert('Failed to create task.');
+                }
+            } catch (error) {
+                console.error('Error creating task:', error);
+                alert('Error connecting to the server.');
+            }
+        });
+
+        // Fetch and render tasks
+        async function fetchTasks() {
+            try {
+                const response = await fetch(API_URL);
+                const tasks = await response.json();
+                
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+
+                tasks.forEach(task => {
+                    const card = document.createElement('div');
+                    card.className = 'task-card';
+                    
+                    card.innerHTML = `
+                        <div class="task-header">
+                            <h3>${escapeHtml(task.title)}</h3>
+                            <div>
+                                <span class="badge priority-${task.priority}">${task.priority}</span>
+                                <span class="badge priority-MEDIUM">${task.status}</span>
+                            </div>
+                        </div>
+                        <p><strong>Description:</strong> ${escapeHtml(task.description || 'N/A')}</p>
+                        <p><strong>Due:</strong> ${task.dueDate || 'No date set'}</p>
+                        
+                        <button class="ai-button" id="btn-${task.id}" onclick="breakdownTask(${task.id})">
+                            ✨ Breakdown with AI
+                        </button>
+                        
+                        <div class="breakdown-container" id="breakdown-${task.id}">
+                            <strong>AI Suggested Subtasks:</strong>
+                            <ul id="list-${task.id}"></ul>
+                        </div>
+                    `;
+                    taskList.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+            }
+        }
+
+        // Handle AI Breakdown Request
+        async function breakdownTask(id) {
+            const button = document.getElementById(`btn-${id}`);
+            const container = document.getElementById(`breakdown-${id}`);
+            const list = document.getElementById(`list-${id}`);
+
+            // UI loading state
+            button.disabled = true;
+            button.innerText = '⏳ Generating Breakdown...';
+            container.style.display = 'none';
+            list.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_URL}/${id}/breakdown`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const subtasks = await response.json();
+                    
+                    if (subtasks.length > 0) {
+                        subtasks.forEach(task => {
+                            const li = document.createElement('li');
+                            li.textContent = task;
+                            list.appendChild(li);
+                        });
+                        container.style.display = 'block';
+                    } else {
+                        alert('AI returned an empty breakdown.');
+                    }
+                } else {
+                    alert('AI Breakdown failed. Check the server console.');
+                }
+            } catch (error) {
+                console.error('Error calling AI endpoint:', error);
+                alert('Error connecting to the AI endpoint.');
+            } finally {
+                // Reset UI state
+                button.disabled = false;
+                button.innerText = '✨ Breakdown with AI';
+            }
+        }
+
+        // Utility to prevent XSS
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
