@@ -1,8 +1,8 @@
 # AI-Powered Task Manager
 
-### Eulerity Backend Developer Summer Intern Assessment
+### A Summer Intern Assessment
 
-This repository contains the take-home assessment for the Eulerity Backend Engineering Intern position. It is a RESTful API built with Java 17 and Spring Boot that functions as a personal task manager. 
+This repository contains the take-home assessment for a summer intern Intern position. It is a RESTful API built with Java 17 and Spring Boot that functions as a personal task manager. 
 
 Beyond standard CRUD operations, this application integrates with a Large Language Model to provide an AI-powered "Breakdown" feature, which analyzes a task's title and automatically generates a list of actionable subtasks. A minimal frontend is included to easily explore and test the API endpoints.
 
